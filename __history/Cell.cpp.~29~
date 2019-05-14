@@ -1,0 +1,69 @@
+// ---------------------------------------------------------------------------
+
+#pragma hdrstop
+
+#include "Cell.h"
+#include "Bitmaps.h"
+// ---------------------------------------------------------------------------
+#pragma package(smart_init)
+// constructor and destructor
+Cell::Cell(): active(true), flagged(false), questionMarked(false), mined(false), mines(0) {}
+
+// request methods
+bool Cell::isActive() {
+	return active;
+}
+
+bool Cell::isFlagged() {
+	return flagged;
+}
+
+bool Cell::isQuestionMarked() {
+	return questionMarked;
+}
+// set methods
+void Cell::deactivate() {
+	active = false;
+}
+
+void Cell::setFlag() {
+	flagged = true;
+}
+
+void Cell::setQuestionMark() {
+	questionMarked = true;
+}
+
+void Cell::setMine() {
+    mined = true;
+}
+
+
+bool Cell::hasMine(){
+	return mined;
+}
+
+int Cell::howManyMinesAround(){
+	return minesAround;
+}
+
+void Cell::setHowManyMinesAround(int mines){
+	minesAround = minesAround;
+}
+void Cell::resetFlag(){
+	flagged = false;
+}
+void Cell::resetQuestionmark(){
+    questionMarked = false;
+}
+void Cell::activate(){
+    active = true;
+}
+void Cell::resetAllProperties(){
+	activate();
+	setHowManyMinesAround(0);
+	mined = false;
+	resetFlag();
+	resetQuestionmark();
+}
+

@@ -1,0 +1,12 @@
+//---------------------------------------------------------------------------
+
+#pragma hdrstop
+
+#include "Bitmaps.h"
+//---------------------------------------------------------------------------
+#pragma package(smart_init)
+
+Bitmaps::Bitmaps(){
+Graphics::TBitmap * active_cell = new Graphics::TBitmap();
+active_cell->LoadFromFile(path); 
+}

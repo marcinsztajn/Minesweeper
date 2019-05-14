@@ -1,0 +1,40 @@
+// ---------------------------------------------------------------------------
+#include <vcl.h>
+#include "Bitmaps.h"
+#ifndef CellH
+#define CellH
+// ---------------------------------------------------------------------------
+
+class Cell {
+private:
+    bool active; // if haven't clicked yet then active = true, else false
+    bool flagged;
+    // if RMB clicked and active and questionMarked = false then bitmap with flag should occur
+    bool questionMarked;
+    // if RMB clicked and cell is active && flagged = true then bitmap with flag should occur
+    bool mined = false; // indicates if cell has a mine/bomb inside, default false
+    int mines_around = 0;
+//    Graphics::TBitmap * bitmap;     // I supposu we do not need that
+//    Bitmaps *bitmaps_ptr;
+
+public:
+    Cell();
+    // request methods
+    bool is_active();
+    bool is_flagged();
+    bool is_questionMarked();
+    // set methods
+    bool deactivate();
+    bool set_flag();
+    bool set_questionMark();
+    bool set_mine();
+    bool has_mine();
+    int how_many_mines_around();
+    void setHowManyMinesAround(int minesAround);
+
+    bool set_bitmaps(Bitmaps *ptr);
+    void resetFlag();
+
+};
+
+#endif

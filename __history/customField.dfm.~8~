@@ -1,0 +1,116 @@
+object Form3: TForm3
+  Left = 0
+  Top = 0
+  Caption = 'Custom Field'
+  ClientHeight = 154
+  ClientWidth = 313
+  Color = clBtnFace
+  Constraints.MaxHeight = 193
+  Constraints.MaxWidth = 329
+  Constraints.MinHeight = 193
+  Constraints.MinWidth = 329
+  Font.Charset = DEFAULT_CHARSET
+  Font.Color = clWindowText
+  Font.Height = -11
+  Font.Name = 'Tahoma'
+  Font.Style = []
+  OldCreateOrder = False
+  PixelsPerInch = 96
+  TextHeight = 13
+  object Label1: TLabel
+    Left = 41
+    Top = 26
+    Width = 63
+    Height = 19
+    Caption = 'Height'
+    Constraints.MaxWidth = 63
+    Constraints.MinWidth = 63
+    Font.Charset = DEFAULT_CHARSET
+    Font.Color = clWindowText
+    Font.Height = -16
+    Font.Name = 'Tahoma'
+    Font.Style = []
+    ParentFont = False
+  end
+  object Label2: TLabel
+    Left = 40
+    Top = 66
+    Width = 63
+    Height = 19
+    Caption = 'Width:'
+    Constraints.MaxWidth = 63
+    Constraints.MinWidth = 63
+    Font.Charset = DEFAULT_CHARSET
+    Font.Color = clWindowText
+    Font.Height = -16
+    Font.Name = 'Tahoma'
+    Font.Style = []
+    ParentFont = False
+  end
+  object Label3: TLabel
+    Left = 41
+    Top = 106
+    Width = 63
+    Height = 19
+    Caption = 'Mines:'
+    Constraints.MaxWidth = 63
+    Constraints.MinWidth = 63
+    Font.Charset = DEFAULT_CHARSET
+    Font.Color = clWindowText
+    Font.Height = -16
+    Font.Name = 'Tahoma'
+    Font.Style = []
+    ParentFont = False
+  end
+  object height: TEdit
+    Left = 99
+    Top = 24
+    Width = 63
+    Height = 21
+    Constraints.MaxWidth = 63
+    Constraints.MinWidth = 63
+    NumbersOnly = True
+    TabOrder = 0
+  end
+  object width: TEdit
+    Left = 99
+    Top = 64
+    Width = 63
+    Height = 21
+    Constraints.MaxWidth = 63
+    Constraints.MinWidth = 63
+    NumbersOnly = True
+    TabOrder = 1
+  end
+  object mines: TEdit
+    Left = 99
+    Top = 108
+    Width = 63
+    Height = 21
+    Constraints.MaxWidth = 63
+    Constraints.MinWidth = 63
+    NumbersOnly = True
+    TabOrder = 2
+  end
+  object Button1: TButton
+    Left = 201
+    Top = 34
+    Width = 63
+    Height = 25
+    Caption = 'OK'
+    Constraints.MaxWidth = 63
+    Constraints.MinWidth = 63
+    TabOrder = 3
+    OnClick = Button1Click
+  end
+  object Button2: TButton
+    Left = 201
+    Top = 90
+    Width = 63
+    Height = 25
+    Caption = 'Cancel'
+    Constraints.MaxWidth = 63
+    Constraints.MinWidth = 63
+    TabOrder = 4
+  end
+end

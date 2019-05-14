@@ -1,0 +1,790 @@
+// ---------------------------------------------------------------------------
+
+#pragma hdrstop
+
+#include "Board.h"
+#include "Bitmaps.h"
+#include <time.h>
+#include <algorithm>
+// ---------------------------------------------------------------------------
+#pragma package(smart_init)
+
+// typedef enum profile gameProfile;
+
+Board::Board(int rows, int cols, int bombs) : rows(rows), cols(cols),
+	amountOfBombs(bombs) {
+	bitmapa = new Graphics::TBitmap;
+	bitmaps_ptr = new Bitmaps();
+	draw_bitmap();
+	idx = 0;
+	previous_x = 0;
+	previous_y = 0;
+	protectedCellsCounter = bombs;
+	fillVectorWithAllAvailableIndicies();
+	cells_init();
+}
+
+Board::~Board() {
+	delete bitmapa;
+	delete bitmaps_ptr;
+	for (Cell * ptr : cells_vector) {
+		delete ptr;
+	}
+}
+
+void Board::newGame(int rows, int cols, int amountOfBombs) {
+	this->rows = rows;
+	this->cols = cols;
+	setAmountOfBombs(amountOfBombs);
+	resetGameLost();
+	resetVectors();
+	resetTime();
+	firstClick = true;
+	draw_bitmap();
+	idx = 0;
+	previous_x = 0;
+	previous_y = 0;
+	protectedCellsCounter = amountOfBombs;
+	fillVectorWithAllAvailableIndicies();
+	resetAllCells();
+	cells_init();
+	stopTimer();
+	resetTime();
+}
+
+void Board::draw_bitmap() {
+	// func draws bitmap based on given arguments: cols, rows
+	// 25 is the width/height of the cells bitmap
+	bitmapa->SetSize(cols *25, rows *25);
+	TPoint pos = Point(0, 0);
+	for (int i = 0; i < rows; i++) {
+		for (int j = 0; j < cols; j++) {
+			bitmapa->Canvas->Draw(pos.x, pos.y, bitmaps_ptr->active_cell);
+			pos.x += bitmaps_ptr->active_cell->Width;
+		}
+		pos.y += bitmaps_ptr->active_cell->Height;
+		pos.x = 0;
+	}
+
+}
+
+void Board::cells_init() {
+	// filling vector with pointers to cells
+	int cells_amount = rows * cols;
+	int sizee = cells_vector.size();
+	for (int i = 0; i < cells_amount; i++) {
+		cells_vector.push_back(new Cell);
+	}
+}
+
+void Board::onLMBDown(int x, int y) {
+	int current_idx = positionToIndex(x, y);
+	LMB_pressed = true;
+	if (cells_vector[current_idx]->isActive())
+	{ // if active, change bitmap in this cell
+		bitmapa->Canvas->Draw(x - x % 25, y - y % 25, bitmaps_ptr->zero);
+		// draw zero bitmap
+		idx = current_idx;
+		previous_x = x - x % 25;
+		previous_y = y - y % 25;
+	}
+}
+
+void Board::onMouseMove(int x, int y) {
+	if (x >= 0 && x < 25 * cols && y >= 0 && y < 25 * rows) {
+		int current_idx = positionToIndex(x, y);
+		if (LMB_pressed && current_idx != idx && cells_vector[current_idx]
+			->isActive()) {
+			bitmapa->Canvas->Draw(previous_x, previous_y,
+				bitmaps_ptr->active_cell); // redraw old one
+			bitmapa->Canvas->Draw(x - x % 25, y - y % 25, bitmaps_ptr->zero);
+			// zero new one
+			idx = current_idx;
+			previous_x = x - x % 25;
+			previous_y = y - y % 25;
+		}
+	}
+	else if (cells_vector[positionToIndex(previous_x, previous_y)]->isActive())
+	{
+		bitmapa->Canvas->Draw(previous_x, previous_y,
+			bitmaps_ptr->active_cell); // redraw old one
+	}
+}
+
+void Board::onLMBUp(int x, int y) {
+	if (x >= 0 && x < 25 * cols && y >= 0 && y < 25 * rows) {
+		int current_idx = positionToIndex(x, y);
+		// if first calling during the game -> spead out the mines
+		if (firstClick) {
+			firstClick = false;
+			placeBombsOnTheBoard(current_idx);
+			// losowanie danej liczby indeksów bez powtórzeń, z wyjatkiem current_idx
+			remainedBombs = bombIndicies;
+			placeBombsInCells(); // sets fields in cells that it has a bomb
+			countAllCellsForBoard(); // counts how many boms around
+			startTimer();
+		}
+		LMB_pressed = false;
+		changeCellBitmapAtGivenIdx(current_idx);
+	}
+	else {
+		LMB_pressed = false;
+	}
+}
+// helper functions
+
+void Board::ind2sub(int *siz, int N, int idx, int *sub) {
+	// siz - size of the N-dimensional array
+	// N - dimensions of the matrix
+	// idx - index in linear format
+
+	int *prod = new int[N];
+	for (int i = 0; i < N; i++) {
+		prod[i] = 1;
+		for (int j = N - 1; j > i; j--)
+			prod[i] *= siz[j];
+	}
+
+	for (int i = 0; i < N; i++) {
+		sub[i] = idx;
+		for (int j = 0; j < i; j++)
+			sub[i] = sub[i] % prod[j];
+		sub[i] = (int)floor((float)sub[i] / prod[i]);
+	}
+	delete[]prod;
+}
+
+int Board::sub2ind(int *siz, int N, int *sub) {
+	int idx = 0;
+	if (0)
+		idx = sub[0] * siz[3] * siz[2] * siz[1] + sub[1] * siz[3] * siz[2] +
+			sub[2] * siz[3] + sub[3];
+	else {
+		for (int i = 0; i < N; i++) {
+			int prod = 1;
+			for (int j = N - 1; j > i; j--)
+				prod *= siz[j];
+			idx += sub[i] * prod;
+		}
+	}
+	return idx;
+}
+
+int Board::positionToIndex(int x, int y)
+{ // indeksy są numerowane od 0 do rows*cols-1
+	// przeliczenie ze znormalnizowanych wspolrzednych - do zera - na indeksy pól
+	int sub[] = {y / 25, x / 25};
+	int size[] = {bitmapa->Height / 25, bitmapa->Width / 25};
+	return sub2ind(size, 2, sub);
+}
+
+void Board::indexToPosition(int idx, int *sub) {
+	int size[] = {rows, cols};
+	int N = 2;
+	// sub[] = {0,0}; // zwracana wartosc
+	ind2sub(size, N, idx, sub);
+	sub[0] *= 25;
+	sub[1] *= 25;
+}
+
+void Board::placeBombsOnTheBoard(int currentIndex) {
+	// function which pick up random cells indicies
+	// amount of bombs cannot be more than (rows*cols - (rows + cols -1)) and what is more this function have to be called after first board click
+	// cause fist click cannot be failed
+	srand(time(NULL)); // seed the random number generator
+	int amountOfCells = rows * cols;
+	int amountOfBombs = getAmountOfBombs();
+	int r; // helper variable
+	// generation of all available indicies on the board
+	std::vector<int>availableIndicies;
+	for (int i = 0; i < amountOfCells; i++) {
+		availableIndicies.push_back(i);
+	}
+	availableIndicies.erase(availableIndicies.begin() + currentIndex);
+	for (int i = amountOfCells - 1;
+	i > (amountOfCells - amountOfBombs - 1); i--)
+	{ // will execute as many times as amount of bombs is
+		r = rand() % i; // generate random number
+		bombIndicies.push_back(availableIndicies[r]);
+		while (r < i - 1)
+		{ // condition to interate through allowed range (from r to penultimate last elemnt of vector)
+			availableIndicies[r] = availableIndicies[r + 1]; // shift
+			r++;
+		}
+	}
+}
+
+int Board::getAmountOfBombs() {
+	return amountOfBombs;
+}
+
+void Board::setAmountOfBombs(int amountOfBombs) {
+	if (amountOfBombs > (rows * cols) - (rows - cols - 1)) {
+		this->amountOfBombs = (rows * cols) - (rows - cols - 1);
+	}
+	else {
+		this->amountOfBombs = amountOfBombs;
+	}
+}
+
+void Board::placeBombsInCells() {
+	// debug
+	int debug_xx = bombIndicies.size();
+	for (auto element : bombIndicies) {
+		cells_vector[element]->setMine();
+	}
+}
+
+int Board::countHowManyBombsAround(int idx)
+{ // common function for every cell on the board
+	//
+	int bombsCount = 0;
+
+	if (idx == 0) { // upper left corner at the board
+		if (cells_vector[idx + 1]->hasMine()) {
+			bombsCount++;
+		}
+		if (cells_vector[idx + cols]->hasMine()) {
+			bombsCount++;
+		}
+		if (cells_vector[idx + cols + 1]->hasMine()) {
+			bombsCount++;
+		}
+	}
+
+	else if (idx == cols - 1) { // upper right corner
+		if (cells_vector[idx - 1]->hasMine()) {
+			bombsCount++;
+		}
+		if (cells_vector[idx + cols]->hasMine()) {
+			bombsCount++;
+		}
+		if (cells_vector[idx + cols - 1]->hasMine()) {
+			bombsCount++;
+		}
+	}
+
+	else if (idx == ((cols * rows) - cols)) { // lower left corner
+		if (cells_vector[idx + 1]->hasMine()) {
+			bombsCount++;
+		}
+		if (cells_vector[idx - cols]->hasMine()) {
+			bombsCount++;
+		}
+		if (cells_vector[idx - cols + 1]->hasMine()) {
+			bombsCount++;
+		}
+	}
+
+	else if (idx == (cols * rows) - 1) { // lower right corner
+		if (cells_vector[idx - 1]->hasMine()) {
+			bombsCount++;
+		}
+		if (cells_vector[idx - cols]->hasMine()) {
+			bombsCount++;
+		}
+		if (cells_vector[idx - cols - 1]->hasMine()) {
+			bombsCount++;
+		}
+	}
+
+	else if (idx > 0 && idx < (cols - 1)) { // first upper row
+		if (cells_vector[idx - 1]->hasMine()) {
+			bombsCount++;
+		}
+		if (cells_vector[idx + cols - 1]->hasMine()) {
+			bombsCount++;
+		}
+		if (cells_vector[idx + cols]->hasMine()) {
+			bombsCount++;
+		}
+		if (cells_vector[idx + cols + 1]->hasMine()) {
+			bombsCount++;
+		}
+		if (cells_vector[idx + 1]->hasMine()) {
+			bombsCount++;
+		}
+	}
+
+	else if (idx > ((rows * cols) - cols) && idx < ((rows * cols) - 1))
+	{ // last lower row
+		if (cells_vector[idx - 1]->hasMine()) {
+			bombsCount++;
+		}
+		if (cells_vector[idx - cols - 1]->hasMine()) {
+			bombsCount++;
+		}
+		if (cells_vector[idx - cols]->hasMine()) {
+			bombsCount++;
+		}
+		if (cells_vector[idx - cols + 1]->hasMine()) {
+			bombsCount++;
+		}
+		if (cells_vector[idx + 1]->hasMine()) {
+			bombsCount++;
+		}
+	}
+
+	else if (idx % cols == 0 && idx != 0 && idx != ((rows * cols) - cols))
+	{ // first, left column
+		if (cells_vector[idx - cols]->hasMine()) {
+			bombsCount++;
+		}
+		if (cells_vector[idx - cols + 1]->hasMine()) {
+			bombsCount++;
+		}
+		if (cells_vector[idx + 1]->hasMine()) {
+			bombsCount++;
+		}
+		if (cells_vector[idx + cols + 1]->hasMine()) {
+			bombsCount++;
+		}
+		if (cells_vector[idx + cols]->hasMine()) {
+			bombsCount++;
+		}
+	}
+
+	else if (((idx + 1) % cols == 0) && (idx != (cols - 1)) && idx !=
+		((rows * cols) - 1) && idx != 0) { // last, right column
+		if (cells_vector[idx - cols]->hasMine()) {
+			bombsCount++;
+		}
+		if (cells_vector[idx - cols - 1]->hasMine()) {
+			bombsCount++;
+		}
+		if (cells_vector[idx - 1]->hasMine()) {
+			bombsCount++;
+		}
+		if (cells_vector[idx + cols - 1]->hasMine()) {
+			bombsCount++;
+		}
+		if (cells_vector[idx + cols]->hasMine()) {
+			bombsCount++;
+		}
+	}
+	else { // in the middle of the board
+		if (cells_vector[idx - cols]->hasMine()) {
+			bombsCount++;
+		}
+		if (cells_vector[idx - cols + 1]->hasMine()) {
+			bombsCount++;
+		}
+		if (cells_vector[idx + 1]->hasMine()) {
+			bombsCount++;
+		}
+		if (cells_vector[idx + cols + 1]->hasMine()) {
+			bombsCount++;
+		}
+		if (cells_vector[idx + cols]->hasMine()) {
+			bombsCount++;
+		}
+		if (cells_vector[idx + cols - 1]->hasMine()) {
+			bombsCount++;
+		}
+		if (cells_vector[idx - 1]->hasMine()) {
+			bombsCount++;
+		}
+		if (cells_vector[idx - cols - 1]->hasMine()) {
+			bombsCount++;
+		}
+
+	}
+
+	return bombsCount;
+}
+
+void Board::countAllCellsForBoard()
+{ // sets cells fields (how many bombs around)
+	int idx = 0;
+	int xxx = 0;
+	int sizee = cells_vector.size(); // check where cells_vecot is created
+	for (auto element : cells_vector) {
+		xxx = countHowManyBombsAround(idx);
+		element->setHowManyMinesAround(countHowManyBombsAround(idx));
+		idx++;
+	}
+}
+
+void Board::changeCellBitmapAtGivenIdx(int idx) {
+	int x, y;
+	int yx[] = {0, 0};
+	indexToPosition(idx, yx);
+	y = yx[0];
+	x = yx[1];
+	if (cells_vector[idx]->isActive())
+	{ // jezeli komorka jest aktywna, to podejmuj akcje
+		if (cells_vector[idx]->hasMine()) { // if has a mine -> game over
+			// GAME OVER
+			bitmapa->Canvas->Draw(x - x % 25, y - y % 25, bitmaps_ptr->redBomb);
+			cells_vector[idx]->deactivate();
+			drawRemainingBombs(idx);
+			drawCrossedBombs();
+			deactivateRemainingCells();
+			stopTimer();
+			setGameLost();
+		}
+		else {
+			eraseElementFromAvailableIndicies(idx);
+			switch (cells_vector[idx]->howManyMinesAround()) {
+			case 0:
+				bitmapa->Canvas->Draw(x - x % 25, y - y % 25,
+					bitmaps_ptr->zero);
+				cells_vector[positionToIndex(x, y)]->deactivate();
+				expandArea(idx); // function to expand area -> recurency
+				break;
+			case 1:
+				bitmapa->Canvas->Draw(x - x % 25, y - y % 25, bitmaps_ptr->one);
+				cells_vector[positionToIndex(x, y)]->deactivate();
+				break;
+			case 2:
+				bitmapa->Canvas->Draw(x - x % 25, y - y % 25, bitmaps_ptr->two);
+				cells_vector[positionToIndex(x, y)]->deactivate();
+				break;
+			case 3:
+				bitmapa->Canvas->Draw(x - x % 25, y - y % 25,
+					bitmaps_ptr->three);
+				cells_vector[positionToIndex(x, y)]->deactivate();
+				break;
+			case 4:
+				bitmapa->Canvas->Draw(x - x % 25, y - y % 25,
+					bitmaps_ptr->four);
+				cells_vector[positionToIndex(x, y)]->deactivate();
+				break;
+			case 5:
+				bitmapa->Canvas->Draw(x - x % 25, y - y % 25,
+					bitmaps_ptr->five);
+				cells_vector[positionToIndex(x, y)]->deactivate();
+				break;
+			case 6:
+				bitmapa->Canvas->Draw(x - x % 25, y - y % 25, bitmaps_ptr->six);
+				cells_vector[positionToIndex(x, y)]->deactivate();
+				break;
+			case 7:
+				bitmapa->Canvas->Draw(x - x % 25, y - y % 25,
+					bitmaps_ptr->seven);
+				cells_vector[positionToIndex(x, y)]->deactivate();
+				break;
+			case 8:
+				bitmapa->Canvas->Draw(x - x % 25, y - y % 25,
+					bitmaps_ptr->eight);
+				cells_vector[positionToIndex(x, y)]->deactivate();
+				break;
+			default: ;
+			}
+		}
+	}
+}
+
+void Board::expandArea(int idx) {
+	// check whole cells around if any has bomb
+	// now we will try different way of check, not using indicies but using cooridantes
+	// based on the board size (a priori known) open neighbour cells
+
+	// 1) convert idx to coordinates (normalized, means that are muliple of 25)
+	int x, y;
+	int yx[] = {0, 0};
+	indexToPosition(idx, yx);
+	y = yx[0];
+	x = yx[1];
+	// 2)  check cells around if they are in range based on cols/rows information
+	// a) check upper cell
+	if (y - 25 >= 0 && cells_vector[positionToIndex(x, y - 25)]->isActive()
+		&& !cells_vector[positionToIndex(x, y - 25)]->hasMine())
+	{ // means that upper cell exists
+		changeCellBitmapAtGivenIdx(positionToIndex(x, y - 25));
+	}
+	// b) check upper-right cell
+	if (y - 25 >= 0 && x + 25 < (cols * 25) -
+		1 && cells_vector[positionToIndex(x + 25, y - 25)]->isActive()
+		&& !cells_vector[positionToIndex(x + 25, y - 25)]->hasMine()) {
+		changeCellBitmapAtGivenIdx(positionToIndex(x + 25, y - 25));
+	}
+	// c) check right cell
+	if (x + 25 < (cols * 25) && cells_vector[positionToIndex(x + 25,
+		y)]->isActive() && !cells_vector[positionToIndex(x + 25, y)]->hasMine())
+	{
+		changeCellBitmapAtGivenIdx(positionToIndex(x + 25, y));
+	}
+	// d) check lower-right cell
+	if (y + 25 < (rows * 25) && x + 25 <
+		(cols * 25) && cells_vector[positionToIndex(x + 25, y + 25)]->isActive()
+		&& !cells_vector[positionToIndex(x + 25, y + 25)]->hasMine()) {
+		changeCellBitmapAtGivenIdx(positionToIndex(x + 25, y + 25));
+	}
+	// e) check lower cell
+	if (y + 25 < rows * 25 && cells_vector[positionToIndex(x, y + 25)]->isActive
+		() && !cells_vector[positionToIndex(x, y + 25)]->hasMine()) {
+		changeCellBitmapAtGivenIdx(positionToIndex(x, y + 25));
+	}
+	// f) check lower-left cell
+	if (y + 25 < rows * 25 && x - 25 >=
+		0 && cells_vector[positionToIndex(x - 25, y + 25)]->isActive()
+		&& !cells_vector[positionToIndex(x - 25, y + 25)]->hasMine()) {
+		changeCellBitmapAtGivenIdx(positionToIndex(x - 25, y + 25));
+	}
+	// g) check left cell
+	if (x - 25 >= 0 && cells_vector[positionToIndex(x - 25, y)]->isActive()
+		&& !cells_vector[positionToIndex(x - 25, y)]->hasMine()) {
+		changeCellBitmapAtGivenIdx(positionToIndex(x - 25, y));
+	}
+	// h) check upper-left cell
+	if (y - 25 >= 0 && x - 25 >= 0 && cells_vector[positionToIndex(x - 25,
+		y - 25)]->isActive() && !cells_vector[positionToIndex(x - 25,
+		y - 25)]->hasMine()) {
+		changeCellBitmapAtGivenIdx(positionToIndex(x - 25, y - 25));
+	}
+} // thats all !
+
+void Board::rightMouseButtonHandler(int x, int y, bool markQuestionmark) {
+	int index = positionToIndex(x, y);
+	// if cell is still active and hasn't been flagged then mark it with flag
+	if (cells_vector[positionToIndex(x, y)]->isActive()
+		&& !cells_vector[positionToIndex(x, y)]->isFlagged()
+		&& !cells_vector[positionToIndex(x, y)]->isQuestionMarked()) {
+		cells_vector[positionToIndex(x, y)]->setFlag();
+		cells_vector[positionToIndex(x, y)]->deactivate();
+		decrementProtectedCellsCounter();
+		bitmapa->Canvas->Draw(x - x % 25, y - y % 25, bitmaps_ptr->flag);
+		// jezeli jest tam bomba to usun z wektora remainedBombs wpis o tych wspolrzednych tego indeksu
+		if (cells_vector[index]->hasMine()) {
+			int cnt = 0;
+			for (auto element : remainedBombs) {
+				if (element == index) {
+					// usun element o tej wartosci z wektora
+					remainedBombs.erase(remainedBombs.begin() + cnt);
+				}
+				cnt++;
+			}
+		}
+		else {
+			failedGuessIndicies.push_back(index);
+		}
+	}
+	// if cell is still active and has been flagged - set questiomark
+	else if (cells_vector[positionToIndex(x, y)]->isFlagged()
+		&& markQuestionmark) {
+		cells_vector[positionToIndex(x, y)]->setQuestionMark();
+		cells_vector[positionToIndex(x, y)]->resetFlag();
+		bitmapa->Canvas->Draw(x - x % 25, y - y % 25,
+			bitmaps_ptr->questionMark);
+		// jezeli jest tam bomba i byla wczesniej flaga to dodaj do wektora remainedBombs wpis o tym indeksie
+		if (cells_vector[index]->hasMine()) {
+			remainedBombs.push_back(index);
+		}
+		else { // usun z failedGuessIndicies
+			int cnt = 0;
+			for (auto element : failedGuessIndicies) {
+				if (element == index) {
+					// usun element o tej wartosci z wektora
+					failedGuessIndicies.erase
+						(failedGuessIndicies.begin() + cnt);
+				}
+				cnt++;
+			}
+		}
+	}
+	// if cell is still active and has been questiomarked - set defualt
+	else if (cells_vector[positionToIndex(x, y)]->isQuestionMarked() ||
+		cells_vector[positionToIndex(x, y)]->isFlagged()) {
+		cells_vector[positionToIndex(x, y)]->resetQuestionmark();
+		cells_vector[positionToIndex(x, y)]->resetFlag();
+		cells_vector[positionToIndex(x, y)]->activate();
+		bitmapa->Canvas->Draw(x - x % 25, y - y % 25, bitmaps_ptr->active_cell);
+		incrementProtectedCellsCounter();
+		if (cells_vector[index]->hasMine()) {
+			remainedBombs.push_back(index);
+		}
+		else { // usun z failedGuessIndicies
+			int cnt = 0;
+			for (auto element : failedGuessIndicies) {
+				if (element == index) {
+					// usun element o tej wartosci z wektora
+					failedGuessIndicies.erase
+						(failedGuessIndicies.begin() + cnt);
+				}
+				cnt++;
+			}
+		}
+	}
+}
+
+void Board::decrementProtectedCellsCounter() {
+	protectedCellsCounter--;
+}
+
+void Board::incrementProtectedCellsCounter() {
+	protectedCellsCounter++;
+}
+
+int Board::getProtectedCellsCounter() {
+	return protectedCellsCounter;
+}
+
+void Board::setProtectedCellsCounter(int amount) {
+	protectedCellsCounter = amount;
+}
+
+void Board::fillVectorWithAllAvailableIndicies() {
+	for (int i = 0; i < cols * rows; i++) {
+		allAvailableIndices.push_back(i);
+	}
+}
+
+void Board::eraseElementFromAvailableIndicies(int idx) {
+	allAvailableIndices.erase(allAvailableIndices.begin() + idx);
+}
+
+void Board::drawRemainingBombs(int idx) {
+	// draw bombs (withoud red background) in every cell besides in argument
+	int yx[] = {0, 0};
+	int y = yx[0];
+	int x = yx[1];
+	// bombIndicies.
+	// for (auto element: bombIndicies) {
+	for (auto element : remainedBombs) {
+		if (element != idx) {
+			indexToPosition(element, yx);
+			y = yx[0];
+			x = yx[1];
+			bitmapa->Canvas->Draw(x - x % 25, y - y % 25,
+				bitmaps_ptr->justBomb);
+		}
+	}
+}
+void Board::drawCrossedBombs(){
+// draw bombs (withoud red background) in every cell besides in argument
+	int yx[] = {0, 0};
+	int y = yx[0];
+	int x = yx[1];
+	// bombIndicies.
+	// for (auto element: bombIndicies) {
+	for (auto element : failedGuessIndicies) {
+		if (element != idx) {
+			indexToPosition(element, yx);
+			y = yx[0];
+			x = yx[1];
+			bitmapa->Canvas->Draw(x - x % 25, y - y % 25,
+				bitmaps_ptr->crossedBomb);
+		}
+	}
+}
+void Board::deactivateRemainingCells() {
+	for (int i = 0; i < cols * rows - 1; i++) {
+		if (cells_vector[i]->isActive()) {
+			cells_vector[i]->deactivate();
+		}
+	}
+}
+
+void Board::stopTimer() {
+	enableTimer = false;
+}
+
+void Board::startTimer() {
+	enableTimer = true;
+}
+
+bool Board::checkIfGameIsLost() {
+	return gameLost;
+}
+
+void Board::setGameLost() {
+	gameLost = true;
+}
+
+void Board::resetGameLost() {
+	gameLost = false;
+}
+
+void Board::incrementTime() {
+	if (enableTimer) {
+		timeCounter++;
+	}
+}
+
+void Board::resetTime() {
+	timeCounter = 0;
+}
+
+void Board::resetAllCells() {
+	for (auto element : cells_vector) {
+		// element->resetAllProperties();
+		delete element;
+	}
+	cells_vector.clear();
+}
+
+void Board::resetVectors() {
+	allAvailableIndices.clear();
+	bombIndicies.clear();
+	remainedBombs.clear();
+	failedGuessIndicies.clear();
+}
+
+bool Board::checkIfTimerEnabled() {
+	return enableTimer;
+}
+
+int Board::getGameTime() {
+	return timeCounter;
+}
+
+bool Board::checkIfVectorsContainSameIndicies(std::vector<int>a,
+	std::vector<int>b) {
+	// sort(a.begin(),a.end());
+	// sort(b.begin(),b.end());
+	if (a == b) {
+		return true;
+	}
+	else {
+		return false;
+	}
+
+}
+
+void Board::drawAllFlagsAfterWin() {
+	int yx[] = {0, 0};
+	for (auto element : bombIndicies) {
+		indexToPosition(element, yx);
+		bitmapa->Canvas->Draw(yx[1] - yx[1] % 25, yx[0] - yx[0] % 25,
+			bitmaps_ptr->flag);
+		cells_vector[positionToIndex(yx[1], yx[0])]->deactivate();
+	}
+	setProtectedCellsCounter(0);
+}
+
+// set and get game profile
+void Board::setGameProfile(profile gameProfile) {
+	this->gameProfile = gameProfile;
+}
+
+profile Board::getGameProfile() {
+	return this->gameProfile;
+}
+
+// void Board::profileToSettings(profile gameProfile){
+// switch (gameProfile) {
+// case begginer:
+// rows = 9;
+// cols = 9;
+// amountOfBombs = 10;
+// break;
+// case intermediate:
+// rows = 16;
+// cols = 16;
+// amountOfBombs = 40;
+// break;
+// case expert:
+// rows = 16;
+// cols = 30;
+// amountOfBombs = 99;
+// break;
+// case custom:
+// rows = 16;
+// cols = 16;
+// amountOfBombs = 40;
+// break;
+// default:
+// ;
+// }
+// }

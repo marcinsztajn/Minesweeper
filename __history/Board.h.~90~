@@ -1,0 +1,105 @@
+// ---------------------------------------------------------------------------
+
+#ifndef BoardH
+#define BoardH
+#include "Bitmaps.h"
+#include "Sun.h"
+#include "Cell.h"
+#include <vector>
+// ---------------------------------------------------------------------------
+
+class Board {
+private:
+	// variables
+	bool LMB_pressed;
+//	bool timerTrigger = false;
+	bool gameLost = false;
+	bool enableTimer = false;
+
+	int cols;      // amonut of cells in one row
+	int rows;      // amount of cells in one column
+	int amountOfBombs = 0;
+	int idx;
+	int previous_x,previous_y;
+	int protectedCellsCounter;
+	int timeCounter = 0;
+
+
+
+
+	// functions
+	int countHowManyBombsAround(int idx); // for each cell
+
+	void draw_bitmap();      // draw board bitmap
+	void placeBombsOnTheBoard(int currentIndex);
+	void placeBombsInCells();
+	void countAllCellsForBoard(); // for whole board
+	void expandArea(int idx); // function that expands area when cell has no bomb inside
+	void changeCellBitmapAtGivenIdx(int idx);
+	void indexToPosition(int idx, int *sub);
+	void fillVectorWithAllAvailableIndicies();
+	void eraseElementFromAvailableIndicies(int idx);
+	void drawRemainingBombs(int idx);
+	void deactivateRemainingCells();
+	void resetAllCells();
+	void resetVectors();
+	void resetGameLost();
+//	void profileToSettings(profile gameProfile);
+
+
+public:
+	 Board(int cols = 10, int rows = 10,int bombs = 10);  // default parameters
+	~Board();
+	// variables
+	bool firstClick = true;
+	Graphics::TBitmap *bitmapa; // pointer to drawn board bitmap
+	Bitmaps * bitmaps_ptr;
+	std::vector <int> bombIndicies;
+	std::vector<Cell *> cells_vector;   // contains pointers to all cells on the Board
+	std::vector<int> allAvailableIndices;
+
+//	profile gameProfile;
+
+
+//	enum profile {
+//		begginer = 0,
+//		intermediate = 1,
+//		expert = 2,
+//		custom = 3
+//	} 
+	profile gameProfile;
+	// functions
+	void cells_init();
+	void newGame(int rows, int cols, int amountOfBombs);
+	void onLMBDown(int x, int y);
+	void onMouseMove(int x, int y);
+	void onLMBUp (int x, int y);
+	void ind2sub(int *siz, int N, int idx, int *sub);
+	void setAmountOfBombs(int AmountOfBombs);
+	void rightMouseButtonHandler(int x, int y, bool markQuestionmark);
+	void decrementProtectedCellsCounter();
+	void incrementProtectedCellsCounter();
+	void setProtectedCellsCounter(int amount);
+	void stopTimer();
+	void startTimer();
+	void setGameLost();
+	void incrementTime();
+	void resetTime();
+    void drawAllFlagsAfterWin();
+
+
+	int sub2ind(int *siz, int N, int *sub);
+	int positionToIndex(int x, int y);
+	int getAmountOfBombs();
+	int getProtectedCellsCounter();
+	int getGameTime();
+
+	bool checkIfGameIsLost();
+	bool checkIfTimerEnabled();
+	bool checkIfVectorsContainSameIndicies(std::vector<int> a, std::vector<int> b);
+
+	// set and get game profile
+	void setGameProfile(profile gameProfile);
+	profile getGameProfile();
+};
+#endif

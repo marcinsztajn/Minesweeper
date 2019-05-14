@@ -1,0 +1,79 @@
+// ---------------------------------------------------------------------------
+
+#pragma hdrstop
+
+#include "Cell.h"
+#include "Bitmaps.h"
+// ---------------------------------------------------------------------------
+#pragma package(smart_init)
+// constructor and destructor
+Cell::Cell(): active(true), flagged(false), questionMarked(false) {
+//        bitmap = new Graphics::TBitmap();
+//        bitmap = bitmaps_ptr->active_cell;  // active cell by default   
+}
+
+// request methods
+bool Cell::is_active() {
+    return active;
+}
+
+bool Cell::is_flagged() {
+    return flagged;
+}
+
+bool Cell::is_questionMarked() {
+    return questionMarked;
+}
+
+// set methods
+bool Cell::deactivate() {
+    active = false;
+//    bitmap = bitmaps_ptr->zero;
+    return true;
+}
+
+bool Cell::set_flag() {
+    flagged = true;
+}
+
+bool Cell::set_questionMark() {
+    questionMarked = true;
+}
+
+bool Cell::set_mine() {
+    mined = true;
+}
+
+//bool Cell::set_bitmaps(Bitmaps *ptr){
+////    bitmaps_ptr = ptr;
+//    return true;
+//}
+
+bool Cell::has_mine(){
+    return mined;
+}
+
+int Cell::how_many_mines_around(){
+    return mines_around;
+}
+
+void Cell::setHowManyMinesAround(int minesAround){
+    this->mines_around = minesAround;
+}
+void Cell::resetFlag(){
+    flagged = false;
+}
+void Cell::resetQuestionmark(){
+    questionMarked = false;
+}
+void Cell::activate(){
+    active = true;
+}
+void Cell::resetAllProperties(){
+	activate();
+	setHowManyMinesAround(0);
+	mined = false;
+	reset_flag();
+	reset_questionmark();
+}
+

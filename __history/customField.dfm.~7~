@@ -1,0 +1,97 @@
+object Form3: TForm3
+  Left = 0
+  Top = 0
+  AutoSize = True
+  Caption = 'Custom Field'
+  ClientHeight = 105
+  ClientWidth = 236
+  Color = clBtnFace
+  Font.Charset = DEFAULT_CHARSET
+  Font.Color = clWindowText
+  Font.Height = -11
+  Font.Name = 'Tahoma'
+  Font.Style = []
+  OldCreateOrder = False
+  PixelsPerInch = 96
+  TextHeight = 13
+  object Label1: TLabel
+    Left = 1
+    Top = 2
+    Width = 46
+    Height = 19
+    Caption = 'Height'
+    Font.Charset = DEFAULT_CHARSET
+    Font.Color = clWindowText
+    Font.Height = -16
+    Font.Name = 'Tahoma'
+    Font.Style = []
+    ParentFont = False
+  end
+  object Label2: TLabel
+    Left = 0
+    Top = 42
+    Width = 47
+    Height = 19
+    Caption = 'Width:'
+    Font.Charset = DEFAULT_CHARSET
+    Font.Color = clWindowText
+    Font.Height = -16
+    Font.Name = 'Tahoma'
+    Font.Style = []
+    ParentFont = False
+  end
+  object Label3: TLabel
+    Left = 1
+    Top = 82
+    Width = 46
+    Height = 19
+    Caption = 'Mines:'
+    Font.Charset = DEFAULT_CHARSET
+    Font.Color = clWindowText
+    Font.Height = -16
+    Font.Name = 'Tahoma'
+    Font.Style = []
+    ParentFont = False
+  end
+  object height: TEdit
+    Left = 59
+    Top = 0
+    Width = 63
+    Height = 21
+    NumbersOnly = True
+    TabOrder = 0
+  end
+  object width: TEdit
+    Left = 59
+    Top = 40
+    Width = 63
+    Height = 21
+    NumbersOnly = True
+    TabOrder = 1
+  end
+  object mines: TEdit
+    Left = 59
+    Top = 84
+    Width = 63
+    Height = 21
+    NumbersOnly = True
+    TabOrder = 2
+  end
+  object Button1: TButton
+    Left = 161
+    Top = 10
+    Width = 75
+    Height = 25
+    Caption = 'OK'
+    TabOrder = 3
+    OnClick = Button1Click
+  end
+  object Button2: TButton
+    Left = 161
+    Top = 66
+    Width = 75
+    Height = 25
+    Caption = 'Cancel'
+    TabOrder = 4
+  end
+end

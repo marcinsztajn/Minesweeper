@@ -1,0 +1,16 @@
+//---------------------------------------------------------------------------
+#include <vector>
+#include <vcl.h>
+#ifndef BitmapsH
+#define BitmapsH
+//---------------------------------------------------------------------------
+class Bitmaps {
+        public:
+        System::UnicodeString path = "../../Images"; 
+        static std::vector<Graphics::TBitmap *> bitmaps;
+        Bitmaps();
+        ~Bitmaps();
+
+};
+
+#endif

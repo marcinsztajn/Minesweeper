@@ -1,0 +1,36 @@
+// ---------------------------------------------------------------------------
+#include <vector>
+#include <vcl.h>
+#ifndef BitmapsH
+#define BitmapsH
+
+// ---------------------------------------------------------------------------
+class Bitmaps {
+public:
+    System::UnicodeString path = "../../Images";
+//    static std::vector<Graphics::TBitmap*>bitmaps;
+
+    Bitmaps();
+    ~Bitmaps();
+
+    static Graphics::TBitmap * active_cell;
+    static Graphics::TBitmap * zero;
+    static Graphics::TBitmap * one;
+    static Graphics::TBitmap * two;
+    static Graphics::TBitmap * three;
+    static Graphics::TBitmap * four;
+    static Graphics::TBitmap * five;
+    static Graphics::TBitmap * six;
+    static Graphics::TBitmap * seven;
+    static Graphics::TBitmap * eight;
+    static Graphics::TBitmap * flag;
+    static Graphics::TBitmap * questionMark;
+    static Graphics::TBitmap * sun;
+    static Graphics::TBitmap * sunCry;
+    static Graphics::TBitmap * sunSunglasses;
+    static Graphics::TBitmap * redBomb;
+    static Graphics::TBitmap * justBomb;
+
+};
+
+#endif
